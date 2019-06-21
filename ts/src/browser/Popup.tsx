@@ -8,6 +8,7 @@ import KeyPair from "../iso/KeyPair";
 import Login from "./Login";
 import NewPassword from "./NewPassword";
 import RequestPermission from "./RequestPermission";
+import RequestSendCurrency from "./RequestSendCurrency";
 import Status from "./Status";
 import Storage from "./Storage";
 import TrustedClient from "./TrustedClient";
@@ -18,7 +19,10 @@ import {
   newKeyPair,
   newPassword,
   denyPermission,
-  grantPermission
+  grantPermission,
+  sendCurrency,
+  REQUEST_PERMISSION,
+  REQUEST_SEND_CURRENCY
 } from "./Actions";
 
 class Popup extends React.Component<any, any> {
@@ -39,10 +43,10 @@ class Popup extends React.Component<any, any> {
     this.props.dispatch(newPassword(password));
   }
 
-  // Closes the page if it ends in ?request
+  // Closes the page if it ends in ?request or ?send
   finishRequest() {
     let parts = window.location.href.split("?");
-    if (parts.length == 2 && parts[1] == "request") {
+    if (parts.length == 2 && (parts[1] == "request" || parts[1] == "send")) {
       window.close();
     }
   }
@@ -67,6 +71,7 @@ class Popup extends React.Component<any, any> {
       flexDirection: "column",
       justifyContent: "center"
     };
+    console.log(this.props);
     if (!this.props.keyPair) {
       // Show the login screen
       return (
@@ -84,7 +89,6 @@ class Popup extends React.Component<any, any> {
         </div>
       );
     }
-
     if (this.props.request) {
       let host = this.props.request.host;
       let permissions = this.props.request.permissions;
@@ -105,6 +109,29 @@ class Popup extends React.Component<any, any> {
           />
         </div>
       );
+    }
+
+    if (this.props.transactions) {
+      let key = this.props.request.key;
+      let publicKey = this.props.request.publicKey;
+      let amount = this.props.request.amount;
+      // The app is requesting to send currency
+      return (
+        <div style={style}>
+          <RequestSendCurrency
+            publicKey={publicKey}
+            amount={amount}
+            accept={() => {
+              this.props.dispatch(sendCurrency(key, publicKey, amount));
+              this.finishRequest();              
+            }}
+            deny={() => {
+              this.finishRequest();
+            }}
+          />
+        </div>
+      )
+
     }
 
     // We have permissions for an account, so show its status

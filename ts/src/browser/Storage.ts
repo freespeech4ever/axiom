@@ -83,7 +83,8 @@ export default class Storage {
       await this.setPasswordAndData(
         state.password,
         state.keyPair,
-        state.permissions
+        state.permissions,
+        state.transactions
       );
     }
   }
@@ -130,7 +131,8 @@ export default class Storage {
 
     return {
       keyPair: kp,
-      permissions: this.data.permissions
+      permissions: this.data.permissions,
+      transactions: this.data.transactions
     };
   }
 
@@ -159,10 +161,11 @@ export default class Storage {
     return true;
   }
 
-  async setPasswordAndData(password, keyPair, permissions) {
+  async setPasswordAndData(password, keyPair, permissions, transactions) {
     let data = {
       keyPair: keyPair.serialize(),
-      permissions: permissions
+      permissions: permissions,
+      transactions: transactions
     };
 
     let json = JSON.stringify(data);

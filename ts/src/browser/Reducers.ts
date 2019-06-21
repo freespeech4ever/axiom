@@ -7,7 +7,8 @@ import {
   LOAD_FROM_STORAGE,
   LOG_OUT,
   NEW_KEY_PAIR,
-  NEW_PASSWORD
+  NEW_PASSWORD,
+  APPROVE_TRANSACTION
 } from "./Actions";
 
 function password(state = null, action) {
@@ -94,4 +95,22 @@ function request(state = null, action) {
   }
 }
 
-export default combineReducers({ password, keyPair, permissions, request });
+// The 'transactions' field holds an object of approved transactions.
+function transactions(state = {}, action) {
+  switch (action.type) {
+    case APPROVE_TRANSACTION:
+      state[action.key] = {
+        publicKey: action.publicKey,
+        amount: action.amount
+      }
+      return state;
+
+    case LOAD_FROM_STORAGE:
+      return action.request || {};
+    
+    default:
+      return state;
+  }
+}
+
+export default combineReducers({ password, keyPair, permissions, request, transactions });

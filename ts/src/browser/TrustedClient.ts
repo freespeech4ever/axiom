@@ -1,4 +1,4 @@
-import { requestPermission } from "./Actions";
+import { requestPermission, requestSendCurrency } from "./Actions";
 import { hasPermission } from "./Permission";
 
 import ChainClient from "../iso/ChainClient";
@@ -104,6 +104,19 @@ export default class TrustedClient {
     return answer;
   }
 
+  // Return true only if they transaction key is found in the approved list
+  getApprovedTransaction(key) {
+    let data = this.storage.getData();
+    if (!data || !data.transactions) {
+      return false;
+    }
+    let answer = data.transactions[key];
+    if (!answer) {
+      return false;
+    }
+    return true;
+  }
+
   sign(message) {
     let kp = this.getKeyPair();
     if (!kp) {
@@ -159,6 +172,41 @@ export default class TrustedClient {
       // The user rejected the requested permissions
       return null;
     }
+  }
+
+  // Prompt the user to accept or deny a currency transfer.
+  async handleRequestSendCurrency(publicKey, amount) {
+    let popupURL = chrome.runtime.getURL("popup.html?send");
+    let store = await Storage.makeStore();
+    let key = 't' + (new Date()).valueOf();
+    store.dispatch(requestSendCurrency(key, publicKey, amount));
+
+    // Wait for the user to either accept or deny, or for one minute
+    let start = new Date();
+    while (true) {
+      await sleep(500);
+      let now = new Date();
+      let ms = now.valueOf() - start.valueOf();
+      if (ms > 1000 * 60) {
+        break;
+      }
+      if (!this.storage.request) {
+        break;
+      }
+    }
+
+    if (this.getApprovedTransaction(key)) {
+      // Send!
+      let client = this.newClient();
+      await client.send(publicKey, amount);
+      return new Message("TransactionApproved", {
+        key: key,
+        publicKey: publicKey,
+        amount: amount,
+        popupURL: popupURL
+      })
+    }
+    
   }
 
   // Handles a message from an untrusted client.
@@ -220,6 +268,9 @@ export default class TrustedClient {
           return new Message("Error", { error: e.message });
         }
         return new Message("Data", {});
+
+      case "RequestSendCurrency":
+        return await this.handleRequestSendCurrency(message.publicKey, message.amount);  
 
       default:
         console.log(
